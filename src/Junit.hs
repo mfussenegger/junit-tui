@@ -95,10 +95,10 @@ parseTestCase :: XML.Element -> Either String TestCase
 parseTestCase element = do
   classname <- lookup "classname" "classname not found in testcase"
   name <- lookup "name" "name not found in testcase"
+  time <- fst <$> (T.rational =<< lookup "time" "time not found in testcase")
   failure <- parseFailure $ XML.elementNodes element
   pure TestCase { name, classname, time, failure }
   where
-    time = 0.0
     lookup = eLookup (XML.elementAttributes element)
 
 
@@ -109,10 +109,10 @@ parseDoc doc = do
   skipped <- fst <$> (T.decimal =<< lookup "skipped" "Number of skipped tests not found")
   failures <- fst <$> (T.decimal =<< lookup "failures" "Number of failed tests not found")
   errors <- fst <$> (T.decimal =<< lookup "errors" "Number of errors not found")
+  time <- fst <$> (T.rational =<< lookup "time" "Total time not found in testsuite")
   testcases <- parseTestCases $ XML.elementNodes testSuiteElement
   pure $ TestSuite { name, tests, skipped, failures, errors, time, testcases }
   where
-    time = 0.0
     testSuiteElement = XML.documentRoot doc
     lookup = eLookup (XML.elementAttributes testSuiteElement)
 
