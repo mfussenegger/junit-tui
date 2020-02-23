@@ -18,6 +18,7 @@ dependencies:
   - text
   - containers
   - xml-conduit
+  - brick
 
 library:
   source-dirs: src
