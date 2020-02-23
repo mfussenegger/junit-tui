@@ -5,7 +5,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Junit (
-  parseFile
+  parseFile,
+  TestSuite (..)
 ) where
 
 

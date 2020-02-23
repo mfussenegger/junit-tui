@@ -18,6 +18,9 @@ dependencies:
   - text
   - containers
   - xml-conduit
+  - brick
+  - vty
+  - vector
 
 library:
   source-dirs: src
