@@ -6,7 +6,8 @@
 
 module Junit (
   parseFile,
-  TestSuite (..)
+  TestSuite (..),
+  TestCase (..)
 ) where
 
 
@@ -32,10 +33,10 @@ data TestSuite
 
 data TestCase
   = TestCase
-      { name :: Text,
-        classname :: Text,
-        time :: Double,
-        failure :: Maybe Failure
+      { tcName :: Text,
+        tcClassname :: Text,
+        tcTime :: Double,
+        tcFailure :: Maybe Failure
       }
   deriving (Eq, Show)
 
@@ -94,11 +95,11 @@ parseFailure nodes =
 
 parseTestCase :: XML.Element -> Either String TestCase
 parseTestCase element = do
-  classname <- lookup "classname" "classname not found in testcase"
-  name <- lookup "name" "name not found in testcase"
-  time <- fst <$> (T.rational =<< lookup "time" "time not found in testcase")
-  failure <- parseFailure $ XML.elementNodes element
-  pure TestCase { name, classname, time, failure }
+  tcClassname <- lookup "classname" "classname not found in testcase"
+  tcName <- lookup "name" "name not found in testcase"
+  tcTime <- fst <$> (T.rational =<< lookup "time" "time not found in testcase")
+  tcFailure <- parseFailure $ XML.elementNodes element
+  pure TestCase { tcName, tcClassname, tcTime, tcFailure }
   where
     lookup = eLookup (XML.elementAttributes element)
 

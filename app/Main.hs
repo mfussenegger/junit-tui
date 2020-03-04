@@ -1,4 +1,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 
 module Main where
 
@@ -13,7 +15,7 @@ import qualified Brick.Widgets.List as B
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Graphics.Vty
-import qualified Graphics.Vty.Input.Events as V
+import qualified Graphics.Vty.Input.Events as Vty
 import qualified Junit
 import System.Environment (getArgs)
 
@@ -27,20 +29,33 @@ data Env
   deriving (Show)
 
 
+data Name
+  = TestSuiteList
+  | TestCaseList
+  deriving (Eq, Ord, Show)
+
+
 type Event = ()
-type Name = ()
 type TestSuites = B.List Name Junit.TestSuite
 
 
 appDraw :: Env -> [B.Widget Name]
 appDraw env = [renderedTestSuite]
   where
-    renderedTestSuite = B.renderList renderTestSuite True (testSuites env)
+    renderedTestSuite =
+      B.renderList renderTestSuite True testSuites' <+> B.renderList renderTestCase True testCases
     renderTestSuite hasFocus e = B.str . T.unpack $ Junit.name e
+    renderTestCase hasFocus e = B.str . T.unpack $ Junit.tcName e
+    testSuites' = testSuites env
+    testCases = B.list TestCaseList testCases' 1
+      where
+        testCases' = case B.listSelectedElement testSuites' of
+          Nothing -> V.empty
+          Just (idx, testSuite) -> V.fromList $ Junit.testcases testSuite
 
 
 appHandleEvent :: Env -> B.BrickEvent Name Event -> B.EventM Name (B.Next Env)
-appHandleEvent env (B.VtyEvent (V.EvKey V.KEsc [])) = B.halt env
+appHandleEvent env (B.VtyEvent (Vty.EvKey Vty.KEsc [])) = B.halt env
 appHandleEvent env (B.VtyEvent e) = do
   newList <- B.handleListEvent e (testSuites env)
   B.continue $ env { testSuites = newList }
@@ -61,7 +76,7 @@ loadEnv arg = do
   eTestSuite <- Junit.parseFile arg >>= rightOrFail
   pure $
     Env
-      { testSuites = B.list () (V.fromList [eTestSuite]) 1,
+      { testSuites = B.list TestSuiteList (V.fromList [eTestSuite]) 1,
         selectedSuite = 0
       }
 
