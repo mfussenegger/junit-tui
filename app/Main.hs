@@ -1,6 +1,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -12,12 +13,18 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as B
 import qualified Brick.Widgets.Center as B
 import qualified Brick.Widgets.List as B
+import qualified Cli
+import Control.Monad (filterM)
+import Data.Either (rights)
+import Data.Foldable (traverse_)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Graphics.Vty
 import qualified Graphics.Vty.Input.Events as Vty
 import qualified Junit
+import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
 import System.Environment (getArgs)
+import System.FilePath ((</>), splitPath)
 
 
 
@@ -71,21 +78,40 @@ rightOrFail (Left err) = error $ show err
 rightOrFail (Right result) = pure result
 
 
-loadEnv :: FilePath -> IO Env
-loadEnv arg = do
-  eTestSuite <- Junit.parseFile arg >>= rightOrFail
+loadEnv :: Cli.Source -> IO Env
+loadEnv (Cli.File file) = do
+  eTestSuite <- Junit.parseFile file >>= rightOrFail
   pure $
     Env
       { testSuites = B.list TestSuiteList (V.fromList [eTestSuite]) 1,
         selectedSuite = 0
       }
-
+loadEnv (Cli.Folder folder) = do
+  testResults <- findTestResults folder
+  suites <- rights <$> traverse Junit.parseFile testResults
+  pure $
+    Env
+      { testSuites = B.list TestSuiteList (V.fromList suites) 1,
+        selectedSuite = 0
+      }
+  where
+    findTestResults :: FilePath -> IO [FilePath]
+    findTestResults startFolder = do
+      contents <- fmap (startFolder </>) <$> listDirectory startFolder
+      files <- filterM doesFileExist contents
+      folders <- filterM doesDirectoryExist contents
+      innerFiles <- concat <$> traverse findTestResults folders
+      pure $ filter isTestFile files <> innerFiles
+    isTestFile filePath = T.isPrefixOf "TEST-" fileName && T.isSuffixOf ".xml" fileName
+      where
+        parts = splitPath filePath
+        fileName = T.pack $ last parts
 
 
 main :: IO ()
 main = do
-  [arg] <- getArgs
-  env <- loadEnv arg
+  source <- Cli.parseArgs
+  env <- loadEnv source
   let app =
         B.App
           { B.appDraw = appDraw,

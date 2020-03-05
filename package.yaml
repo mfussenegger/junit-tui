@@ -21,6 +21,9 @@ dependencies:
   - brick
   - vty
   - vector
+  - optparse-applicative
+  - directory
+  - filepath
 
 library:
   source-dirs: src
